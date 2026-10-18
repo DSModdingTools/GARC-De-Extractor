@@ -103,93 +103,93 @@ def compress_folder(folder_path):
     print(f'\tCompressed {folder_path} to {output_folder}\n')
     return(output_folder)
 
-def extract_garc(filepath):
-    #for filepath in filepath_set:
-    while True:
-        write_dir =  filepath + '_extracted_GARC'
-        if(input(f'Use {write_dir} as output folder? Y/N\n').lower() == 'y'):
-            if(not os.path.isdir(write_dir)):
+def extract_garc(filepath_set):
+    for filepath in filepath_set:
+        while True:
+            write_dir =  filepath + '_extracted_GARC'
+            if(input(f'Use {write_dir} as output folder? Y/N\n').lower() == 'y'):
+                if(not os.path.isdir(write_dir)):
+                    os.makedirs(write_dir)
+            else:
+                write_dir = askdirectory(title = f'Select folder to write extracted files from {filepath} to')
+
+
+            if(not os.path.exists(write_dir)):
                 os.makedirs(write_dir)
-        else:
-            write_dir = askdirectory(title = f'Select folder to write extracted files from {filepath} to')
 
 
-        if(not os.path.exists(write_dir)):
-            os.makedirs(write_dir)
+            #empty is false only if directory has stuff in it
+            empty = True
+            for _ in os.scandir(write_dir):
+                empty = False
+                break
 
-
-        #empty is false only if directory has stuff in it
-        empty = True
-        for _ in os.scandir(write_dir):
-            empty = False
-            break
-
-        if(empty):
-            break
-        else:
-            if(input('Selected directory is non-empty, proceeding will first delete all current files (but not folders) inside of it, proceed? y/n\n').lower() == 'y'):
-
-                for filename in os.listdir(write_dir):
-                    temp = os.path.join(write_dir, filename)
-                    if(not(os.path.isdir(temp))):
-                        os.remove(temp)
+            if(empty):
                 break
             else:
-                print('Please select a different directory')
+                if(input('Selected directory is non-empty, proceeding will first delete all current files (but not folders) inside of it, proceed? y/n\n').lower() == 'y'):
+
+                    for filename in os.listdir(write_dir):
+                        temp = os.path.join(write_dir, filename)
+                        if(not(os.path.isdir(temp))):
+                            os.remove(temp)
+                    break
+                else:
+                    print('Please select a different directory')
 
 
-    while True:
-        decompress_now = False
-        break
-
-
-        decompress_now = input('Decompress as we extract? y/n\n').lower()
-
-        if(decompress_now == 'y'):
-            decompress_now = True
-            break
-        elif(decompress_now == 'n'):
+        while True:
             decompress_now = False
             break
-        else:
-            print(f'{decompress_now} not understood as a valid answer')
 
 
-    with open(filepath, 'r+b') as source_file:
-        bindata = source_file.read()
+            decompress_now = input('Decompress as we extract? y/n\n').lower()
 
-    FAT0_offset = 0x24
-    FATB_offset = FAT0_offset + flibi(bindata[FAT0_offset + 0x4:FAT0_offset + 0x8])
-    file_count = flibi(bindata[FAT0_offset + 0x8:FAT0_offset + 0xA])
-    data_absolute_offset = flibi(bindata[0x10:0x14])
+            if(decompress_now == 'y'):
+                decompress_now = True
+                break
+            elif(decompress_now == 'n'):
+                decompress_now = False
+                break
+            else:
+                print(f'{decompress_now} not understood as a valid answer')
 
-    #0xC is start of the actual file location/length data.
-    FATB_offset += 0xC
+
+        with open(filepath, 'r+b') as source_file:
+            bindata = source_file.read()
+
+        FAT0_offset = 0x24
+        FATB_offset = FAT0_offset + flibi(bindata[FAT0_offset + 0x4:FAT0_offset + 0x8])
+        file_count = flibi(bindata[FAT0_offset + 0x8:FAT0_offset + 0xA])
+        data_absolute_offset = flibi(bindata[0x10:0x14])
+
+        #0xC is start of the actual file location/length data.
+        FATB_offset += 0xC
     
-    fillz = 5 if file_count >= 5000 else 4
-    for file_number in range(file_count):
+        fillz = 5 if file_count >= 5000 else 4
+        for file_number in range(file_count):
 
-        with open(os.path.join(write_dir, str(file_number).zfill(fillz) + '.bin'), 'w+b') as f:
+            with open(os.path.join(write_dir, str(file_number).zfill(fillz) + '.bin'), 'w+b') as f:
 
-            #pointer to start of next file
-            data_offset = data_absolute_offset + flibi(bindata[FATB_offset + 0x4:FATB_offset + 0x8])
+                #pointer to start of next file
+                data_offset = data_absolute_offset + flibi(bindata[FATB_offset + 0x4:FATB_offset + 0x8])
 
-            #get length of current file
-            file_length = flibi(bindata[FATB_offset + 0xC:FATB_offset + 0x10])
+                #get length of current file
+                file_length = flibi(bindata[FATB_offset + 0xC:FATB_offset + 0x10])
 
-            #write data to next bin file
-            f.write(bytes(decompress_bytes(bindata[data_offset:data_offset + file_length])) if (decompress_now and bindata[data_offset] == 0x11) else bytes(bindata[data_offset:data_offset + file_length]))
+                #write data to next bin file
+                f.write(bytes(decompress_bytes(bindata[data_offset:data_offset + file_length])) if (decompress_now and bindata[data_offset] == 0x11) else bytes(bindata[data_offset:data_offset + file_length]))
 
-            #the offset end is different than start + length because length is padded to multiple of 4.
+                #the offset end is different than start + length because length is padded to multiple of 4.
 
-        FATB_offset += 0x10
-    print(f'\Extracted the GARC {filepath} to {write_dir}\n')
+            FATB_offset += 0x10
+        print(f'\Extracted the GARC {filepath} to {write_dir}\n')
 
 
 
-    if(input('Decompress now? y/n\n').lower() == 'y'):
-        for file in os.listdir(write_dir):
-            decompress_file(file)
+        if(input('Decompress now? y/n\n').lower() == 'y'):
+            for file in os.listdir(write_dir):
+                decompress_file(file)
 
 
 
