@@ -42,35 +42,35 @@ def decompress_file(filepath_set, altpath = ''):
                         g.write(bytes(decompress_bytes(source_data)))
                         g.truncate()
 
-def compress_file(filepath, altpath = ''):
- #   for filepath in filepath_set:
-    with open(filepath, 'r+b') as source_file:
-        source_data = source_file.read()
+def compress_file(filepath_set, altpath = ''):
+    for filepath in filepath_set:
+        with open(filepath, 'r+b') as source_file:
+            source_data = source_file.read()
 
-        if(len(source_data) == 0):
-            print(f'{filepath} is an empty file')
-            return
-        elif(source_data[0] == 0x11):
-            if(altpath == ''):
-                print(f'{filepath} is already compressed!\n')
+            if(len(source_data) == 0):
+                print(f'{filepath} is an empty file')
                 return
+            elif(source_data[0] == 0x11):
+                if(altpath == ''):
+                    print(f'{filepath} is already compressed!\n')
+                    return
+                else:
+                    if(not os.path.isdir(os.path.abspath(os.path.join(altpath, os.pardir)))):
+                        os.mkdir(os.path.abspath(os.path.join(altpath, os.pardir)))
+                    with open(altpath, 'w+b') as g:
+                        g.write(bytes(source_data))
+                        g.truncate()
             else:
-                if(not os.path.isdir(os.path.abspath(os.path.join(altpath, os.pardir)))):
-                    os.mkdir(os.path.abspath(os.path.join(altpath, os.pardir)))
-                with open(altpath, 'w+b') as g:
-                    g.write(bytes(source_data))
-                    g.truncate()
-        else:
-            source_file.seek(0)
-            print(f'\tCompressing {filepath}\n')
-            if(altpath == ''):
-                source_file.write(bytes(compress_raw_lzss11(source_data)))
-                source_file.truncate()
-            else:
-                if(not os.path.isdir(os.path.abspath(os.path.join(altpath, os.pardir)))):
-                    os.mkdir(os.path.abspath(os.path.join(altpath, os.pardir)))
-                with open(altpath, 'w+b') as g:
-                    g.write(bytes(compress_raw_lzss11(source_data)))
+                source_file.seek(0)
+                print(f'\tCompressing {filepath}\n')
+                if(altpath == ''):
+                    source_file.write(bytes(compress_raw_lzss11(source_data)))
+                    source_file.truncate()
+                else:
+                    if(not os.path.isdir(os.path.abspath(os.path.join(altpath, os.pardir)))):
+                        os.mkdir(os.path.abspath(os.path.join(altpath, os.pardir)))
+                    with open(altpath, 'w+b') as g:
+                        g.write(bytes(compress_raw_lzss11(source_data)))
 
 
 def decompress_folder(folder_path_set):
@@ -80,7 +80,7 @@ def decompress_folder(folder_path_set):
             os.makedirs(output_folder)
 
         for filename in os.listdir(folder_path):
-            decompress_file(os.path.join(folder_path, filename), os.path.join(output_folder, filename))
+            decompress_file([os.path.join(folder_path, filename)], os.path.join(output_folder, filename))
 
         print(f'\tDecompressed {folder_path} to {output_folder}\n')
         return(output_folder)
@@ -98,7 +98,7 @@ def compress_folder(folder_path):
 
     for filename in os.listdir(folder_path):
         if(filename != '00000.bin'):
-            compress_file(os.path.join(folder_path, filename), os.path.join(output_folder, filename))
+            compress_file([os.path.join(folder_path, filename)], os.path.join(output_folder, filename))
 
     print(f'\tCompressed {folder_path} to {output_folder}\n')
     return(output_folder)
@@ -183,13 +183,13 @@ def extract_garc(filepath_set):
                 #the offset end is different than start + length because length is padded to multiple of 4.
 
             FATB_offset += 0x10
-        print(f'\Extracted the GARC {filepath} to {write_dir}\n')
+        print(f'\nExtracted the GARC {filepath} to {write_dir}\n')
 
 
 
         if(input('Decompress now? y/n\n').lower() == 'y'):
             for file in os.listdir(write_dir):
-                decompress_file(file)
+                decompress_file([file])
 
 
 
