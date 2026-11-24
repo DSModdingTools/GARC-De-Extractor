@@ -298,8 +298,15 @@ def build_garc(folder_path):
         biggest_size_padding = 0
         for countcount, filename in enumerate(os.listdir(folder_path)):
 
-            if(countcount % (file_count//20) == 0):
+            if(file_count <= 20):
                 print(f'{countcount*100//file_count}%')
+
+            elif(file_count <= 100 and countcount % (file_count//10) == 0):
+                print(f'{countcount*100//file_count}%')
+
+            elif(countcount % (file_count//20) == 0):
+                print(f'{countcount*100//file_count}%')
+
 
             #don't do anything wih subfolders
             if(os.path.isdir(filename)):
